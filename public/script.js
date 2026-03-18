@@ -8,8 +8,8 @@ const statusIndicator = document.getElementById('status');
 const statusDot = statusIndicator.querySelector('.status-dot');
 const statusText = statusIndicator.querySelector('.status-text');
 
-// URL de l'API backend - REMPLACER PAR VOTRE URL RENDER
-const API_URL = 'https://creatorbot-xy90.onrender.com';
+// URL de l'API backend - REMPLACER PAR VOTRE URL RAILWAY
+const API_URL = 'https://creatorbot-production.up.railway.app';
 
 // État de l'application
 let isGenerating = false;
@@ -58,6 +58,12 @@ async function checkBotStatus() {
         }
     } catch (error) {
         addLog(`❌ Erreur de connexion au backend: ${error.message}`, 'error');
+        
+        // Message clair pour l'utilisateur si le backend est en cours de réveil
+        if (error.message.includes('Failed to fetch') || error.message.includes('NetworkError')) {
+            addLog('⏳ Le serveur Railway est en cours de réveil, réessayez dans 30 secondes', 'warning');
+        }
+        
         updateStatus('Erreur de connexion', 'error');
         return false;
     }

@@ -9,12 +9,9 @@ const app = express();
 const PORT = process.env.PORT || 10000;
 
 // Configuration CORS pour autoriser les origines
-// REMPLACER PAR L'URL NETLIFY DEFINITIVE ICI
 app.use(cors({
-  origin: '*', // URLs autorisées
-  methods: ['GET', 'POST'],
-  allowedHeaders: ['Content-Type'],
-  credentials: true
+  origin: '*', // Pour être sûr que Netlify puisse appeler Railway sans blocage
+  methods: ['GET', 'POST']
 }));
 
 app.use(express.json());
@@ -312,6 +309,11 @@ app.post('/generate', async (req, res) => {
     console.error('❌ Erreur lors de la génération:', error.message);
     res.status(500).json({ error: error.message });
   }
+});
+
+// Route racine pour tester l'URL
+app.get('/', (req, res) => {
+  res.send('Serveur OK - Discord Server Generator Backend');
 });
 
 // Route pour vérifier l'état du bot
