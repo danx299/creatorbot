@@ -11,7 +11,7 @@ const PORT = process.env.PORT || 10000;
 // Configuration CORS pour autoriser les origines
 // REMPLACER PAR L'URL NETLIFY DEFINITIVE ICI
 app.use(cors({
-  origin: '*', // Pour le développement - remplacer par ['https://votre-url.netlify.app'] en production
+  origin: ['https://botcreator1.netlify.app', 'https://creatorbot-xy90.onrender.com'], // URLs autorisées
   methods: ['GET', 'POST'],
   allowedHeaders: ['Content-Type'],
   credentials: true
