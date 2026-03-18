@@ -35,12 +35,25 @@ client.once('ready', () => {
 });
 
 // Debug de la tentative de connexion
-console.log("🔑 Tentative de connexion avec le token...");
+console.log("🔑 Tentative de connexion avec le token (longueur: " + (process.env.DISCORD_TOKEN?.length || 0) + ")...");
 
-client.login(process.env.DISCORD_TOKEN).catch(err => {
-  console.error("❌ ERREUR DISORD :", err.message);
-  console.error("🔍 Détails de l'erreur :", err);
-});
+client.on('error', (err) => console.error("❌ ERREUR TECHNIQUE BOT :", err));
+client.on('shardError', (err) => console.error("❌ ERREUR DE CONNEXION (Shard) :", err));
+
+client.login(process.env.DISCORD_TOKEN)
+  .then(() => {
+    console.log("✅ LOGIN RÉUSSI ! Le bot est authentifié.");
+  })
+  .catch(err => {
+    console.error("💥 ÉCHEC CRITIQUE DU LOGIN !");
+    console.error("RAISON :", err.message);
+    if (err.message.includes("Privileged intents")) {
+      console.error("👉 SOLUTION : Active les 3 interrupteurs 'Intents' sur le portail Discord !");
+    }
+    if (err.message.includes("An invalid token")) {
+      console.error("👉 SOLUTION : Ton token est expiré ou mal copié sur Render !");
+    }
+  });
 
 // Fonction pour nettoyer la réponse IA et extraire le JSON
 function cleanAIResponse(response) {
