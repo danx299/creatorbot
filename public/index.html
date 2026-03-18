@@ -1,0 +1,69 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Discord Server Generator</title>
+    <link rel="stylesheet" href="style.css">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+</head>
+<body>
+    <div class="container">
+        <header class="header">
+            <div class="logo">
+                <span class="discord-icon">🎮</span>
+                <h1>Discord Server Generator</h1>
+            </div>
+            <p class="subtitle">Créez des serveurs Discord uniques avec l'IA</p>
+        </header>
+
+        <main class="main-content">
+            <section class="generator-section">
+                <div class="input-group">
+                    <label for="theme-input">Thème du serveur</label>
+                    <input 
+                        type="text" 
+                        id="theme-input" 
+                        placeholder="Ex: Gaming, Community, Programming..."
+                        class="theme-input"
+                    >
+                </div>
+                
+                <div class="input-group">
+                    <label for="guild-input">ID du serveur Discord</label>
+                    <input 
+                        type="text" 
+                        id="guild-input" 
+                        placeholder="Ex: 123456789012345678"
+                        class="theme-input"
+                    >
+                </div>
+                
+                <button id="generate-btn" class="generate-btn">
+                    <span class="btn-icon">✨</span>
+                    Générer le serveur
+                </button>
+
+                <div class="status-indicator" id="status">
+                    <span class="status-dot"></span>
+                    <span class="status-text">Prêt</span>
+                </div>
+            </section>
+
+            <section class="logs-section">
+                <div class="logs-header">
+                    <h3>Logs d'activité</h3>
+                    <button id="clear-logs" class="clear-btn">Effacer</button>
+                </div>
+                <div id="logs" class="logs-container"></div>
+            </section>
+        </main>
+
+        <footer class="footer">
+            <p>Powered by AI • Discord.js v14 • OpenRouter</p>
+        </footer>
+    </div>
+
+    <script src="script.js"></script>
+</body>
+</html>

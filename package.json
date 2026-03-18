@@ -1,0 +1,20 @@
+{
+  "name": "discord-server-generator",
+  "version": "1.0.0",
+  "description": "Générateur de serveurs Discord avec IA",
+  "main": "server.js",
+  "scripts": {
+    "start": "node server.js",
+    "dev": "node server.js"
+  },
+  "dependencies": {
+    "discord.js": "^14.14.1",
+    "express": "^4.18.2",
+    "cors": "^2.8.5",
+    "dotenv": "^16.3.1",
+    "axios": "^1.6.2"
+  },
+  "keywords": ["discord", "bot", "generator", "ai"],
+  "author": "CreatorBot",
+  "license": "MIT"
+}
