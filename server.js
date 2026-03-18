@@ -11,7 +11,7 @@ const PORT = process.env.PORT || 10000;
 // Configuration CORS pour autoriser les origines
 // REMPLACER PAR L'URL NETLIFY DEFINITIVE ICI
 app.use(cors({
-  origin: ['https://botcreator1.netlify.app', 'https://creatorbot-xy90.onrender.com'], // URLs autorisées
+  origin: '*', // URLs autorisées
   methods: ['GET', 'POST'],
   allowedHeaders: ['Content-Type'],
   credentials: true
@@ -303,17 +303,24 @@ app.post('/generate', async (req, res) => {
 
 // Route pour vérifier l'état du bot
 app.get('/status', (req, res) => {
-  const status = {
-    connected: client.isReady(),
-    username: client.user?.tag || 'Non connecté',
-    guilds: client.guilds?.cache.size || 0,
-    readyState: client.presence?.status || 'unknown',
-    tokenExists: !!process.env.DISCORD_TOKEN,
-    tokenLength: process.env.DISCORD_TOKEN?.length || 0
-  };
-  
-  console.log("🔍 Status check:", status);
-  res.json(status);
+  try {
+    const isBotReady = client && client.user && client.isReady();
+    
+    const status = {
+      connected: !!isBotReady,
+      username: isBotReady ? client.user.tag : 'En attente...',
+      guilds: isBotReady ? client.guilds.cache.size : 0,
+      // Utilise l'état du WebSocket (0 = READY)
+      wsStatus: client?.ws?.status === 0 ? 'CONNECTED' : 'CONNECTING',
+      tokenConfigured: !!process.env.DISCORD_TOKEN
+    };
+    
+    console.log("🔍 Status Check envoyé :", status.connected ? "✅ CONNECTÉ" : "⏳ EN ATTENTE");
+    res.json(status);
+  } catch (error) {
+    console.error("❌ Erreur dans la route /status:", error);
+    res.status(500).json({ error: "Erreur interne du serveur" });
+  }
 });
 
 // Démarrage du serveur
