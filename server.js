@@ -31,10 +31,15 @@ const client = new Client({
 // Connexion du bot Discord
 client.once('ready', () => {
   console.log(`✅ Bot connecté en tant que ${client.user.tag}`);
+  console.log(`📊 Bot présent sur ${client.guilds.cache.size} serveurs`);
 });
 
+// Debug de la tentative de connexion
+console.log("🔑 Tentative de connexion avec le token...");
+
 client.login(process.env.DISCORD_TOKEN).catch(err => {
-  console.error('❌ Erreur de connexion Discord:', err.message);
+  console.error("❌ ERREUR DISORD :", err.message);
+  console.error("🔍 Détails de l'erreur :", err);
 });
 
 // Fonction pour nettoyer la réponse IA et extraire le JSON
@@ -298,11 +303,17 @@ app.post('/generate', async (req, res) => {
 
 // Route pour vérifier l'état du bot
 app.get('/status', (req, res) => {
-  res.json({
+  const status = {
     connected: client.isReady(),
     username: client.user?.tag || 'Non connecté',
-    guilds: client.guilds?.cache.size || 0
-  });
+    guilds: client.guilds?.cache.size || 0,
+    readyState: client.presence?.status || 'unknown',
+    tokenExists: !!process.env.DISCORD_TOKEN,
+    tokenLength: process.env.DISCORD_TOKEN?.length || 0
+  };
+  
+  console.log("🔍 Status check:", status);
+  res.json(status);
 });
 
 // Démarrage du serveur
