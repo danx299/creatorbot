@@ -8,10 +8,8 @@ const statusIndicator = document.getElementById('status');
 const statusDot = statusIndicator.querySelector('.status-dot');
 const statusText = statusIndicator.querySelector('.status-text');
 
-// URL de l'API backend
-const API_URL = window.location.origin === 'https://botcreator1.netlify.app' 
-    ? 'https://your-backend-url.onrender.com' 
-    : 'http://localhost:10000';
+// URL de l'API backend - REMPLACER PAR VOTRE URL RENDER
+const API_URL = 'https://creatorbot-xy90.onrender.com';
 
 // État de l'application
 let isGenerating = false;

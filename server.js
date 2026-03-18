@@ -8,11 +8,13 @@ const { Client, GatewayIntentBits, ChannelType, PermissionsBitField } = require(
 const app = express();
 const PORT = process.env.PORT || 10000;
 
-// Configuration CORS pour autoriser uniquement https://botcreator1.netlify.app
+// Configuration CORS pour autoriser les origines
+// REMPLACER PAR L'URL NETLIFY DEFINITIVE ICI
 app.use(cors({
-  origin: 'https://botcreator1.netlify.app',
+  origin: '*', // Pour le développement - remplacer par ['https://votre-url.netlify.app'] en production
   methods: ['GET', 'POST'],
-  allowedHeaders: ['Content-Type']
+  allowedHeaders: ['Content-Type'],
+  credentials: true
 }));
 
 app.use(express.json());
