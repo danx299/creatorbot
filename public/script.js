@@ -2,32 +2,24 @@
 const themeInput = document.getElementById('theme-input');
 const guildInput = document.getElementById('guild-input');
 const generateBtn = document.getElementById('generate-btn');
+const deployBtn = document.getElementById('deploy-btn');
 const logsContainer = document.getElementById('logs');
 const clearLogsBtn = document.getElementById('clear-logs');
 const statusIndicator = document.getElementById('status');
 const statusDot = statusIndicator.querySelector('.status-dot');
 const statusText = statusIndicator.querySelector('.status-text');
 
-// Éléments de preview et modal
+// Éléments de preview
 const previewContainer = document.getElementById('preview-container');
 const previewStatus = document.getElementById('preview-status');
-const channelModal = document.getElementById('channel-modal');
-const modalChannelName = document.getElementById('modal-channel-name');
-const modalChannelType = document.getElementById('modal-channel-type');
-const privateOption = document.getElementById('private-option');
-const readonlyOption = document.getElementById('readonly-option');
-const modalClose = document.getElementById('modal-close');
-const modalCancel = document.getElementById('modal-cancel');
-const modalSave = document.getElementById('modal-save');
 
 // URL de l'API backend - REMPLACER PAR VOTRE URL RAILWAY
 const API_URL = 'https://creatorbot-production.up.railway.app';
 
 // État de l'application
 let isGenerating = false;
+let isDeploying = false;
 let currentStructure = null;
-let currentChannel = null;
-let channelPermissions = new Map();
 
 // Fonction pour ajouter un log
 function addLog(message, type = 'info') {
@@ -84,16 +76,72 @@ async function checkBotStatus() {
     }
 }
 
-// Fonction pour générer le serveur
-async function generateServer() {
+// Fonction pour générer la structure (Étape 1)
+async function generateStructure() {
     const theme = themeInput.value.trim();
-    const guildId = guildInput.value.trim();
     
     if (!theme) {
         addLog('⚠️ Veuillez entrer un thème pour le serveur', 'warning');
         themeInput.focus();
         return;
     }
+    
+    if (isGenerating) {
+        addLog('⚠️ Génération déjà en cours...', 'warning');
+        return;
+    }
+    
+    isGenerating = true;
+    generateBtn.disabled = true;
+    generateBtn.innerHTML = '<span class="btn-icon">⏳</span> Génération en cours...';
+    updateStatus('Génération de la structure', 'loading');
+    
+    addLog(`🎨 Début de la génération pour le thème: "${theme}"`, 'info');
+    
+    try {
+        const response = await fetch(`${API_URL}/generate-structure`, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json'
+            },
+            body: JSON.stringify({ theme })
+        });
+        
+        const data = await response.json();
+        
+        if (!response.ok) {
+            throw new Error(data.error || 'Erreur lors de la génération');
+        }
+        
+        // Succès
+        currentStructure = data.structure;
+        addLog('✅ Structure générée avec succès!', 'success');
+        addLog(`📁 ${data.structure.categories.length} catégories proposées`, 'info');
+        addLog(`💬 ${data.structure.categories.reduce((acc, cat) => acc + cat.channels.length, 0)} salons proposés`, 'info');
+        addLog(`👑 ${data.structure.roles.length} rôles proposés`, 'info');
+        updateStatus('Structure prête', 'ready');
+        
+        // Afficher la preview
+        displayPreview(data.structure);
+        addLog('👁️ Preview interactive disponible', 'info');
+        
+        // Afficher le bouton de déploiement
+        deployBtn.style.display = 'flex';
+        addLog('🚀 Bouton de déploiement disponible', 'info');
+        
+    } catch (error) {
+        addLog(`❌ Erreur lors de la génération: ${error.message}`, 'error');
+        updateStatus('Erreur de génération', 'error');
+    } finally {
+        isGenerating = false;
+        generateBtn.disabled = false;
+        generateBtn.innerHTML = '<span class="btn-icon">✨</span> Générer la structure';
+    }
+}
+
+// Fonction pour déployer sur Discord (Étape 2)
+async function deployToDiscord() {
+    const guildId = guildInput.value.trim();
     
     if (!guildId) {
         addLog('⚠️ Veuillez entrer l\'ID du serveur Discord', 'warning');
@@ -107,8 +155,13 @@ async function generateServer() {
         return;
     }
     
-    if (isGenerating) {
-        addLog('⚠️ Génération déjà en cours...', 'warning');
+    if (!currentStructure) {
+        addLog('⚠️ Veuillez d\'abord générer une structure', 'warning');
+        return;
+    }
+    
+    if (isDeploying) {
+        addLog('⚠️ Déploiement déjà en cours...', 'warning');
         return;
     }
     
@@ -119,53 +172,54 @@ async function generateServer() {
         return;
     }
     
-    isGenerating = true;
-    generateBtn.disabled = true;
-    generateBtn.innerHTML = '<span class="btn-icon">⏳</span> Génération en cours...';
-    updateStatus('Génération en cours', 'loading');
+    isDeploying = true;
+    deployBtn.disabled = true;
+    deployBtn.innerHTML = '<span class="btn-icon">⏳</span> Déploiement en cours...';
+    updateStatus('Déploiement sur Discord', 'loading');
     
-    addLog(`🎨 Début de la génération pour le thème: "${theme}"`, 'info');
-    addLog(`🏰 Serveur cible: ${guildId}`, 'info');
+    addLog(`🚀 Début du déploiement sur le serveur: ${guildId}`, 'info');
     
     try {
-        const response = await fetch(`${API_URL}/generate`, {
+        const response = await fetch(`${API_URL}/deploy`, {
             method: 'POST',
             headers: {
                 'Content-Type': 'application/json'
             },
-            body: JSON.stringify({ theme, guildId })
+            body: JSON.stringify({ 
+                guildId,
+                structure: currentStructure
+            })
         });
         
         const data = await response.json();
         
         if (!response.ok) {
-            throw new Error(data.error || 'Erreur lors de la génération');
+            throw new Error(data.error || 'Erreur lors du déploiement');
         }
         
         // Succès
-        addLog('✅ Serveur généré avec succès!', 'success');
+        addLog('🎉 Serveur déployé avec succès!', 'success');
         addLog(`📁 ${data.stats.categories} catégories créées`, 'info');
         addLog(`💬 ${data.stats.channels} salons créés`, 'info');
         addLog(`👑 ${data.stats.roles} rôles créés`, 'info');
-        updateStatus('Génération terminée', 'ready');
+        addLog(`🔒 ${data.stats.privateChannels} salons privés`, 'info');
+        addLog(`📖 ${data.stats.readonlyChannels} salons en lecture seule`, 'info');
+        updateStatus('Déploiement terminé', 'ready');
         
-        // Afficher la preview
-        if (data.structure) {
-            displayPreview(data.structure);
-            addLog('👁️ Preview interactive disponible', 'info');
-        }
+        // Masquer le bouton de déploiement après succès
+        deployBtn.style.display = 'none';
         
     } catch (error) {
-        addLog(`❌ Erreur lors de la génération: ${error.message}`, 'error');
-        updateStatus('Erreur de génération', 'error');
+        addLog(`❌ Erreur lors du déploiement: ${error.message}`, 'error');
+        updateStatus('Erreur de déploiement', 'error');
     } finally {
-        isGenerating = false;
-        generateBtn.disabled = false;
-        generateBtn.innerHTML = '<span class="btn-icon">✨</span> Générer le serveur';
+        isDeploying = false;
+        deployBtn.disabled = false;
+        deployBtn.innerHTML = '<span class="btn-icon">🚀</span> Déployer sur Discord';
     }
 }
 
-// Fonction pour afficher la preview de la structure
+// Fonction pour afficher la preview avec switchs inline
 function displayPreview(structure) {
     currentStructure = structure;
     previewStatus.textContent = 'Prêt';
@@ -173,37 +227,59 @@ function displayPreview(structure) {
     
     let html = '';
     
-    structure.categories.forEach(category => {
+    structure.categories.forEach((category, categoryIndex) => {
         html += `
-            <div class="preview-category">
+            <div class="preview-category" style="animation: fadeInUp 0.5s ease ${categoryIndex * 0.1}s both">
                 <div class="preview-category-name">
                     ${category.name}
                 </div>
                 <div class="preview-channels">
         `;
         
-        category.channels.forEach(channel => {
+        category.channels.forEach((channel, channelIndex) => {
             const channelId = `${category.name}-${channel.name}`;
-            const permissions = channelPermissions.get(channelId) || {};
+            const channelData = {
+                ...channel,
+                isPrivate: channel.isPrivate || false,
+                readOnly: channel.readOnly || false
+            };
+            
             const classes = [
                 'preview-channel',
                 channel.type,
-                permissions.private ? 'private' : '',
-                permissions.readonly ? 'readonly' : ''
+                channelData.isPrivate ? 'private' : '',
+                channelData.readOnly ? 'readonly' : ''
             ].filter(Boolean).join(' ');
             
             const icon = channel.type === 'voice' ? '🎤' : '💬';
-            const badges = [];
-            if (permissions.private) badges.push('🔒');
-            if (permissions.readonly) badges.push('📖');
             
             html += `
                 <div class="${classes}" data-channel-id="${channelId}" 
                      data-category="${category.name}" data-channel="${channel.name}" 
-                     data-type="${channel.type}">
-                    <span>${icon}</span>
-                    <span>${channel.name}</span>
-                    <span class="channel-badges">${badges.join(' ')}</span>
+                     data-type="${channel.type}"
+                     style="animation: fadeInUp 0.5s ease ${(categoryIndex * 0.1) + (channelIndex * 0.05)}s both">
+                    <div class="channel-info">
+                        <span>${icon}</span>
+                        <span>${channel.name}</span>
+                    </div>
+                    <div class="channel-toggles">
+                        <div class="toggle-wrapper">
+                            <label class="toggle-switch private">
+                                <input type="checkbox" ${channelData.isPrivate ? 'checked' : ''} 
+                                       onchange="toggleChannelPermission('${channelId}', 'isPrivate', this.checked)">
+                                <span class="toggle-slider"></span>
+                            </label>
+                            <span class="toggle-label">🔒</span>
+                        </div>
+                        <div class="toggle-wrapper">
+                            <label class="toggle-switch readonly">
+                                <input type="checkbox" ${channelData.readOnly ? 'checked' : ''} 
+                                       onchange="toggleChannelPermission('${channelId}', 'readOnly', this.checked)">
+                                <span class="toggle-slider"></span>
+                            </label>
+                            <span class="toggle-label">📝</span>
+                        </div>
+                    </div>
                 </div>
             `;
         });
@@ -216,76 +292,57 @@ function displayPreview(structure) {
     
     previewContainer.innerHTML = html;
     
-    // Ajouter les écouteurs d'événements pour les salons cliquables
-    document.querySelectorAll('.preview-channel').forEach(channel => {
-        channel.addEventListener('click', () => openChannelModal(channel));
-    });
+    // Ajouter les animations CSS si elles n'existent pas déjà
+    if (!document.querySelector('#preview-animations')) {
+        const style = document.createElement('style');
+        style.id = 'preview-animations';
+        style.textContent = `
+            @keyframes fadeInUp {
+                from {
+                    opacity: 0;
+                    transform: translateY(20px);
+                }
+                to {
+                    opacity: 1;
+                    transform: translateY(0);
+                }
+            }
+            
+            .toggle-wrapper {
+                display: flex;
+                align-items: center;
+                gap: 2px;
+            }
+        `;
+        document.head.appendChild(style);
+    }
 }
 
-// Fonction pour ouvrir la modal d'options de salon
-function openChannelModal(channelElement) {
-    const categoryId = channelElement.dataset.category;
-    const channelName = channelElement.dataset.channel;
-    const channelType = channelElement.dataset.type;
-    const channelId = channelElement.dataset.channelId;
+// Fonction pour basculer les permissions d'un salon
+function toggleChannelPermission(channelId, permission, value) {
+    // Mettre à jour la structure
+    const [categoryName, channelName] = channelId.split('-');
+    const category = currentStructure.categories.find(cat => cat.name === categoryName);
     
-    currentChannel = {
-        id: channelId,
-        name: channelName,
-        type: channelType,
-        category: categoryId
-    };
-    
-    // Mettre à jour la modal
-    modalChannelName.textContent = channelType === 'voice' ? '🎤 ' : '💬 ' + channelName;
-    modalChannelType.textContent = channelType === 'voice' ? 'Vocal' : 'Texte';
-    
-    // Charger les permissions existantes
-    const permissions = channelPermissions.get(channelId) || {};
-    privateOption.checked = permissions.private || false;
-    readonlyOption.checked = permissions.readonly || false;
-    
-    // Afficher la modal
-    channelModal.classList.add('show');
-}
-
-// Fonction pour fermer la modal
-function closeModal() {
-    channelModal.classList.remove('show');
-    currentChannel = null;
-}
-
-// Fonction pour sauvegarder les permissions du salon
-function saveChannelPermissions() {
-    if (!currentChannel) return;
-    
-    const permissions = {
-        private: privateOption.checked,
-        readonly: readonlyOption.checked
-    };
-    
-    channelPermissions.set(currentChannel.id, permissions);
-    
-    // Mettre à jour l'affichage du salon
-    const channelElement = document.querySelector(`[data-channel-id="${currentChannel.id}"]`);
-    if (channelElement) {
-        // Mettre à jour les classes
-        channelElement.classList.toggle('private', permissions.private);
-        channelElement.classList.toggle('readonly', permissions.readonly);
-        
-        // Mettre à jour les badges
-        const badges = [];
-        if (permissions.private) badges.push('🔒');
-        if (permissions.readonly) badges.push('📖');
-        
-        const badgesElement = channelElement.querySelector('.channel-badges');
-        if (badgesElement) {
-            badgesElement.textContent = badges.join(' ');
+    if (category) {
+        const channel = category.channels.find(ch => ch.name === channelName);
+        if (channel) {
+            if (permission === 'isPrivate') {
+                channel.isPrivate = value;
+            } else if (permission === 'readOnly') {
+                channel.readOnly = value;
+            }
+            
+            // Mettre à jour les classes CSS
+            const channelElement = document.querySelector(`[data-channel-id="${channelId}"]`);
+            if (channelElement) {
+                channelElement.classList.toggle('private', channel.isPrivate);
+                channelElement.classList.toggle('readonly', channel.readOnly);
+            }
+            
+            addLog(`🔧 ${channelName}: ${permission} = ${value}`, 'info');
         }
     }
-    
-    addLog(`✅ Permissions mises à jour pour ${currentChannel.name}`, 'success');
-    closeModal();
 }
 
 // Fonction pour effacer les logs
@@ -341,32 +398,18 @@ themeInput.addEventListener('keypress', (e) => {
 
 guildInput.addEventListener('keypress', (e) => {
     if (e.key === 'Enter') {
-        generateServer();
+        if (currentStructure) {
+            deployToDiscord();
+        } else {
+            generateStructure();
+        }
     }
 });
 
 // Écouteurs d'événements
-generateBtn.addEventListener('click', generateServer);
+generateBtn.addEventListener('click', generateStructure);
+deployBtn.addEventListener('click', deployToDiscord);
 clearLogsBtn.addEventListener('click', clearLogs);
-
-// Écouteurs pour la modal
-modalClose.addEventListener('click', closeModal);
-modalCancel.addEventListener('click', closeModal);
-modalSave.addEventListener('click', saveChannelPermissions);
-
-// Fermer la modal en cliquant à l'extérieur
-channelModal.addEventListener('click', (e) => {
-    if (e.target === channelModal) {
-        closeModal();
-    }
-});
-
-// Fermer la modal avec la touche Échap
-document.addEventListener('keydown', (e) => {
-    if (e.key === 'Escape' && channelModal.classList.contains('show')) {
-        closeModal();
-    }
-});
 
 // Auto-focus sur le premier input
 themeInput.focus();

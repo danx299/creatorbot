@@ -192,8 +192,8 @@ async function clearServer(guild) {
   }
 }
 
-// Fonction pour créer la structure du serveur avec permissions
-async function createServerStructure(guild, structure, permissionOverwrites = []) {
+// Fonction pour créer la structure du serveur avec permissions intégrées
+async function createServerStructure(guild, structure) {
   try {
     console.log('🏗️ Création de la structure du serveur...');
     
@@ -222,29 +222,25 @@ async function createServerStructure(guild, structure, permissionOverwrites = []
         try {
           const channelType = channel.type === 'voice' ? ChannelType.GuildVoice : ChannelType.GuildText;
           
-          // Préparer les permissions pour ce salon
-          const permissions = permissionOverwrites.find(p => 
-            p.channelId === `${categoryData.original.name}-${channel.name}`
-          );
-          
+          // Préparer les permission overwrites depuis les attributs du salon
           let permissionOverwrites = [];
           
-          if (permissions) {
-            // Si le salon est privé
-            if (permissions.private) {
-              permissionOverwrites.push({
-                id: guild.roles.everyone.id,
-                deny: [PermissionsBitField.Flags.ViewChannel]
-              });
-            }
-            
-            // Si le salon est en lecture seule
-            if (permissions.readonly) {
-              permissionOverwrites.push({
-                id: guild.roles.everyone.id,
-                deny: [PermissionsBitField.Flags.SendMessages]
-              });
-            }
+          // Si le salon est privé (isPrivate)
+          if (channel.isPrivate) {
+            permissionOverwrites.push({
+              id: guild.roles.everyone.id,
+              deny: [PermissionsBitField.Flags.ViewChannel]
+            });
+            console.log(`🔒 Salon privé: ${channel.name}`);
+          }
+          
+          // Si le salon est en lecture seule (readOnly)
+          if (channel.readOnly) {
+            permissionOverwrites.push({
+              id: guild.roles.everyone.id,
+              deny: [PermissionsBitField.Flags.SendMessages]
+            });
+            console.log(`📖 Salon lecture seule: ${channel.name}`);
           }
           
           const createdChannel = await guild.channels.create({
@@ -257,8 +253,8 @@ async function createServerStructure(guild, structure, permissionOverwrites = []
           createdChannels.set(`${categoryData.original.name}-${channel.name}`, createdChannel);
           console.log(`💬 Salon créé: ${channel.name} dans ${categoryData.original.name}`);
           
-          if (permissions) {
-            console.log(`🔒 Permissions appliquées: privé=${permissions.private}, lecture seule=${permissions.readonly}`);
+          if (channel.isPrivate || channel.readOnly) {
+            console.log(`🔒 Permissions appliquées: privé=${channel.isPrivate}, lecture seule=${channel.readOnly}`);
           }
         } catch (error) {
           console.error(`❌ Erreur création salon ${channel.name}:`, error.message);
@@ -293,7 +289,39 @@ async function createServerStructure(guild, structure, permissionOverwrites = []
   }
 }
 
-// Route principale pour la génération
+// Route pour générer uniquement la structure (sans déploiement)
+app.post('/generate-structure', async (req, res) => {
+  try {
+    const { theme } = req.body;
+    
+    if (!theme) {
+      return res.status(400).json({ error: 'Le thème est requis' });
+    }
+
+    console.log(`🎨 Génération de structure pour le thème: ${theme}`);
+
+    // Générer la structure via IA
+    console.log('🤖 Génération de la structure par IA...');
+    const structure = await generateServerStructure(theme);
+
+    res.json({ 
+      success: true, 
+      message: 'Structure générée avec succès',
+      structure: structure,
+      stats: {
+        categories: structure.categories.length,
+        channels: structure.categories.reduce((acc, cat) => acc + cat.channels.length, 0),
+        roles: structure.roles.length
+      }
+    });
+
+  } catch (error) {
+    console.error('❌ Erreur lors de la génération de la structure:', error.message);
+    res.status(500).json({ error: error.message });
+  }
+});
+
+// Route principale pour la génération (compatibilité)
 app.post('/generate', async (req, res) => {
   try {
     const { theme, guildId } = req.body;
@@ -327,7 +355,7 @@ app.post('/generate', async (req, res) => {
     await clearServer(guild);
 
     // Créer la nouvelle structure
-    await createServerStructure(guild, structure, req.body.permissionOverwrites || []);
+    await createServerStructure(guild, structure);
 
     res.json({ 
       success: true, 
@@ -342,6 +370,67 @@ app.post('/generate', async (req, res) => {
 
   } catch (error) {
     console.error('❌ Erreur lors de la génération:', error.message);
+    res.status(500).json({ error: error.message });
+  }
+});
+
+// Route pour déployer la structure sur Discord
+app.post('/deploy', async (req, res) => {
+  try {
+    const { guildId, structure } = req.body;
+    
+    if (!guildId) {
+      return res.status(400).json({ error: 'L\'ID du serveur Discord est requis' });
+    }
+    
+    if (!structure) {
+      return res.status(400).json({ error: 'La structure est requise' });
+    }
+
+    console.log(`🚀 Déploiement sur le serveur: ${guildId}`);
+
+    // Vérifier que le bot est connecté
+    if (!client.isReady()) {
+      return res.status(500).json({ error: 'Bot Discord non connecté' });
+    }
+
+    // Récupérer le serveur avec l'ID fourni
+    const guild = client.guilds.cache.get(guildId);
+    if (!guild) {
+      return res.status(404).json({ error: 'Serveur Discord non trouvé. Le bot doit être sur ce serveur.' });
+    }
+
+    // Nettoyer le serveur
+    await clearServer(guild);
+
+    // Créer la nouvelle structure avec permissions
+    const createdChannels = await createServerStructure(guild, structure);
+
+    // Compter les salons avec permissions spéciales
+    let privateChannels = 0;
+    let readonlyChannels = 0;
+    
+    structure.categories.forEach(category => {
+      category.channels.forEach(channel => {
+        if (channel.isPrivate) privateChannels++;
+        if (channel.readOnly) readonlyChannels++;
+      });
+    });
+
+    res.json({ 
+      success: true, 
+      message: 'Serveur déployé avec succès',
+      stats: {
+        categories: structure.categories.length,
+        channels: structure.categories.reduce((acc, cat) => acc + cat.channels.length, 0),
+        roles: structure.roles.length,
+        privateChannels,
+        readonlyChannels
+      }
+    });
+
+  } catch (error) {
+    console.error('❌ Erreur lors du déploiement:', error.message);
     res.status(500).json({ error: error.message });
   }
 });
