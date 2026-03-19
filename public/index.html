@@ -1,617 +1,129 @@
 <!DOCTYPE html>
 <html lang="fr">
 <head>
-<meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Discord Server Generator</title>
-<link rel="preconnect" href="https://fonts.googleapis.com">
-<link href="https://fonts.googleapis.com/css2?family=DM+Sans:ital,wght@0,300;0,400;0,500;0,600&family=DM+Mono:wght@300;400;500&display=swap" rel="stylesheet">
-<style>
-*,*::before,*::after{margin:0;padding:0;box-sizing:border-box}
-
-:root{
---ink:        #0b0c10;
---ink2:       #10121a;
---ink3:       #171a24;
---ink4:       #1e2130;
-
---e0: rgba(255,255,255,0.03);
---e1: rgba(255,255,255,0.055);
---e2: rgba(255,255,255,0.09);
---e3: rgba(255,255,255,0.16);
-
---t0: rgba(255,255,255,0.95);
---t1: rgba(255,255,255,0.65);
---t2: rgba(255,255,255,0.35);
---t3: rgba(255,255,255,0.18);
-
---blue:  #0066ff;
---blue2: #1a7aff;
---blue3: rgba(0,102,255,0.12);
-
---green:  #2ecc71;
---amber:  #f39c12;
---red:    #e74c3c;
-
---r-sm: 6px;
---r-md: 12px;
---r-lg: 18px;
---r-xl: 24px;
-
---sans: 'DM Sans', system-ui, sans-serif;
---mono: 'DM Mono', 'SF Mono', monospace;
-}
-
-html{font-size:16px;-webkit-font-smoothing:antialiased;text-rendering:optimizeLegibility}
-
-body{
-  font-family:var(--sans);
-  background:var(--ink);
-  color:var(--t0);
-  min-height:100vh;
-  overflow-x:hidden;
-}
-
-/* ─── BACKGROUND ─── */
-.bg{
-  position:fixed;inset:0;z-index:0;overflow:hidden;
-  background:
-    radial-gradient(ellipse 700px 500px at -5% 0%,   rgba(0,60,200,0.18) 0%, transparent 70%),
-    radial-gradient(ellipse 500px 400px at 110% 90%,  rgba(0,30,120,0.14) 0%, transparent 70%),
-    var(--ink);
-}
-.bg-grid{
-  position:absolute;inset:0;
-  background-image:
-    linear-gradient(var(--e1) 1px, transparent 1px),
-    linear-gradient(90deg, var(--e1) 1px, transparent 1px);
-  background-size:80px 80px;
-  mask-image:radial-gradient(ellipse 80% 80% at 50% 40%, black 30%, transparent 100%);
-}
-
-/* ─── LAYOUT ─── */
-.shell{
-  position:relative;z-index:1;
-  max-width:1180px;margin:0 auto;
-  padding:32px 28px 48px;
-  display:flex;flex-direction:column;gap:20px;
-  min-height:100vh;
-}
-
-/* ─── GLASS SURFACE ─── */
-.surface{
-  background:var(--e0);
-  border:1px solid var(--e1);
-  border-radius:var(--r-xl);
-  backdrop-filter:blur(24px);
-  -webkit-backdrop-filter:blur(24px);
-  position:relative;overflow:hidden;
-}
-.surface::before{
-  content:'';position:absolute;inset:0;border-radius:inherit;
-  background:linear-gradient(135deg, var(--e2) 0%, transparent 50%);
-  pointer-events:none;
-}
-.surface.accent-edge{
-  border-color:rgba(0,102,255,0.18);
-  box-shadow:
-    0 0 0 1px rgba(0,102,255,0.07) inset,
-    0 0 60px rgba(0,102,255,0.06),
-    0 40px 80px rgba(0,0,0,0.5);
-}
-
-/* ─── HEADER ─── */
-.header{
-  padding:20px 28px;
-  display:flex;align-items:center;justify-content:space-between;gap:20px;
-}
-.hd-left{display:flex;align-items:center;gap:18px}
-
-.logotype{
-  width:44px;height:44px;border-radius:14px;
-  background:linear-gradient(145deg,#0055ee,#0033aa);
-  border:1px solid rgba(0,102,255,0.4);
-  box-shadow:0 0 0 4px rgba(0,102,255,0.08),0 8px 24px rgba(0,0,0,0.4);
-  display:flex;align-items:center;justify-content:center;
-  font-size:20px;flex-shrink:0;
-}
-
-.hd-meta h1{font-size:1.12rem;font-weight:600;letter-spacing:-0.022em;color:var(--t0)}
-.hd-meta p{font-size:0.72rem;font-weight:400;color:var(--t2);letter-spacing:0.01em;margin-top:2px}
-
-.hd-right{display:flex;align-items:center;gap:10px}
-
-.chip{
-  display:inline-flex;align-items:center;gap:6px;
-  padding:6px 12px;
-  background:var(--e0);border:1px solid var(--e2);border-radius:99px;
-  font-size:0.68rem;font-weight:500;letter-spacing:0.05em;
-  color:var(--t2);text-transform:uppercase;
-}
-.chip-dot{
-  width:5px;height:5px;border-radius:50%;
-  background:var(--green);box-shadow:0 0 7px var(--green);
-  animation:pulse 3s ease-in-out infinite;
-}
-@keyframes pulse{0%,100%{opacity:1}50%{opacity:.4}}
-
-.chip-ver{
-  font-family:var(--mono);font-size:0.65rem;
-  padding:5px 10px;
-  background:var(--e0);border:1px solid var(--e2);border-radius:var(--r-sm);
-  color:var(--t2);
-}
-
-/* ─── GRID ─── */
-.grid-3{
-  display:grid;
-  grid-template-columns:300px 1fr 1fr;
-  gap:16px;flex:1;
-}
-
-/* ─── SECTION LABEL ─── */
-.s-head{display:flex;align-items:center;justify-content:space-between;margin-bottom:18px}
-.s-label{
-  font-size:0.65rem;font-weight:500;letter-spacing:0.1em;
-  text-transform:uppercase;color:var(--t2);
-  display:flex;align-items:center;gap:7px;
-}
-.s-bar{width:16px;height:1px;background:linear-gradient(90deg,var(--blue),transparent)}
-
-/* ─── PANELS ─── */
-.gen-panel{padding:26px 24px;display:flex;flex-direction:column}
-.log-panel{padding:24px;display:flex;flex-direction:column}
-.prev-panel{padding:24px;display:flex;flex-direction:column}
-
-/* ─── FIELDS ─── */
-.field-wrap{margin-bottom:16px}
-.field-label{
-  display:block;font-size:0.68rem;font-weight:500;
-  letter-spacing:0.07em;text-transform:uppercase;
-  color:var(--t2);margin-bottom:8px;
-}
-.field{
-  width:100%;padding:11px 14px;
-  background:rgba(0,0,0,0.28);
-  border:1px solid var(--e2);border-radius:var(--r-md);
-  color:var(--t0);font-family:var(--sans);font-size:0.85rem;
-  outline:none;
-  transition:border-color .2s,box-shadow .2s,background .2s;
-}
-.field::placeholder{color:var(--t3)}
-.field:focus{
-  border-color:rgba(0,102,255,0.5);
-  background:rgba(0,50,200,0.07);
-  box-shadow:0 0 0 3px rgba(0,102,255,0.1);
-}
-
-/* ─── BUTTONS ─── */
-.btn{
-  width:100%;padding:12px 18px;
-  border:none;border-radius:var(--r-md);
-  font-family:var(--sans);font-size:0.84rem;font-weight:500;
-  cursor:pointer;
-  display:flex;align-items:center;justify-content:center;gap:8px;
-  transition:transform .18s,box-shadow .18s,opacity .18s;
-  position:relative;overflow:hidden;
-}
-.btn::after{
-  content:'';position:absolute;inset:0;border-radius:inherit;
-  background:linear-gradient(135deg,rgba(255,255,255,0.06) 0%,transparent 60%);
-  pointer-events:none;
-}
-.btn:active{transform:scale(0.97)}
-.btn:disabled{opacity:0.32;cursor:not-allowed;transform:none}
-
-.btn-primary{
-  background:linear-gradient(145deg,#0060ff,#0045cc);
-  color:#fff;
-  border:1px solid rgba(0,120,255,0.35);
-  box-shadow:
-    0 0 0 1px rgba(255,255,255,0.08) inset,
-    0 6px 20px rgba(0,80,255,0.35),
-    0 2px 6px rgba(0,0,0,0.35);
-  margin-bottom:10px;
-}
-.btn-primary:hover:not(:disabled){
-  transform:translateY(-1.5px);
-  box-shadow:
-    0 0 0 1px rgba(255,255,255,0.12) inset,
-    0 10px 30px rgba(0,80,255,0.5),
-    0 3px 8px rgba(0,0,0,0.35);
-}
-
-.btn-deploy{
-  background:rgba(46,204,113,0.1);
-  color:var(--green);
-  border:1px solid rgba(46,204,113,0.22);
-  box-shadow:0 0 0 1px rgba(46,204,113,0.05) inset;
-  margin-bottom:10px;
-  animation:surfup .4s cubic-bezier(.34,1.56,.64,1);
-}
-.btn-deploy:hover:not(:disabled){
-  background:rgba(46,204,113,0.16);
-  transform:translateY(-1.5px);
-  box-shadow:0 6px 22px rgba(46,204,113,0.16);
-}
-@keyframes surfup{from{opacity:0;transform:translateY(12px)}to{opacity:1;transform:none}}
-
-/* ─── STATUS ─── */
-.status{
-  display:flex;align-items:center;gap:9px;
-  padding:10px 13px;
-  background:rgba(0,0,0,0.22);
-  border:1px solid var(--e2);
-  border-radius:var(--r-md);
-  margin-top:4px;
-}
-.st-dot{
-  width:6px;height:6px;border-radius:50%;flex-shrink:0;
-  background:var(--green);box-shadow:0 0 8px var(--green);
-  animation:pulse 3s infinite;
-}
-.st-dot.loading{background:var(--amber);box-shadow:0 0 8px var(--amber);animation-duration:.7s}
-.st-dot.error  {background:var(--red);  box-shadow:0 0 8px var(--red);  animation:none}
-.st-text{font-size:0.75rem;color:var(--t2)}
-
-/* ─── LOGS ─── */
-.ghost-btn{
-  padding:5px 12px;
-  background:transparent;border:1px solid var(--e2);
-  border-radius:var(--r-sm);
-  font-family:var(--sans);font-size:0.68rem;font-weight:500;
-  color:var(--t2);cursor:pointer;letter-spacing:0.04em;text-transform:uppercase;
-  transition:color .18s,border-color .18s,background .18s;
-}
-.ghost-btn:hover{color:var(--red);border-color:rgba(231,76,60,0.3);background:rgba(231,76,60,0.07)}
-
-.log-scroll{
-  flex:1;overflow-y:auto;
-  background:rgba(0,0,0,0.3);
-  border:1px solid var(--e1);
-  border-radius:var(--r-md);
-  padding:12px;
-  max-height:400px;min-height:200px;
-}
-.log-scroll::-webkit-scrollbar{width:3px}
-.log-scroll::-webkit-scrollbar-thumb{background:var(--e2);border-radius:99px}
-
-.log-row{
-  display:flex;align-items:baseline;gap:7px;
-  padding:5px 8px;border-radius:6px;margin-bottom:2px;
-  border-left:1.5px solid transparent;
-  font-size:0.76rem;
-  animation:logsld .2s ease;
-}
-@keyframes logsld{from{opacity:0;transform:translateX(-5px)}to{opacity:1;transform:none}}
-.log-row.info   {border-left-color:var(--blue2);background:rgba(0,102,255,0.06)}
-.log-row.success{border-left-color:var(--green); background:rgba(46,204,113,0.05)}
-.log-row.warning{border-left-color:var(--amber); background:rgba(243,156,18,0.06)}
-.log-row.error  {border-left-color:var(--red);   background:rgba(231,76,60,0.06)}
-.log-ts{font-family:var(--mono);font-size:0.65rem;color:var(--t3);flex-shrink:0;letter-spacing:0.02em}
-.log-msg{color:var(--t1);flex:1}
-
-/* ─── PREVIEW ─── */
-.prev-tag{
-  display:inline-flex;align-items:center;gap:5px;
-  padding:3px 10px;
-  background:var(--e0);border:1px solid var(--e1);border-radius:99px;
-  font-size:0.65rem;color:var(--t2);letter-spacing:0.04em;
-}
-.prev-body{
-  flex:1;margin-top:14px;
-  background:rgba(0,0,0,0.28);
-  border:1px solid var(--e1);border-radius:var(--r-lg);
-  overflow:hidden;min-height:360px;max-height:420px;overflow-y:auto;
-}
-.prev-body::-webkit-scrollbar{width:3px}
-.prev-body::-webkit-scrollbar-thumb{background:var(--e2);border-radius:99px}
-
-.placeholder{
-  height:360px;display:flex;flex-direction:column;
-  align-items:center;justify-content:center;gap:12px;
-  color:var(--t3);padding:40px;
-}
-.ph-icon{
-  width:48px;height:48px;border-radius:14px;
-  background:var(--e0);border:1px solid var(--e1);
-  display:flex;align-items:center;justify-content:center;
-  font-size:20px;opacity:.45;
-}
-.placeholder p{font-size:0.8rem;text-align:center;max-width:180px;line-height:1.5}
-
-/* ─── DISCORD PREVIEW ITEMS ─── */
-.dc-wrap{padding:10px 8px}
-.dc-cat{
-  padding:8px 8px 4px;font-size:0.62rem;font-weight:600;
-  letter-spacing:0.1em;text-transform:uppercase;color:var(--t3);
-  display:flex;align-items:center;gap:5px;cursor:default;user-select:none;
-}
-.dc-cat:hover{color:var(--t2)}
-.dc-ch{
-  display:flex;align-items:center;justify-content:space-between;
-  padding:6px 10px 6px 16px;border-radius:8px;
-  cursor:pointer;margin-bottom:1px;
-  transition:background .12s;font-size:0.82rem;color:var(--t2);
-}
-.dc-ch:hover{background:var(--e1);color:var(--t0)}
-.dc-ch.active{background:var(--e2);color:var(--t0)}
-.dc-ch-l{display:flex;align-items:center;gap:7px}
-.dc-icon{font-size:0.9rem;opacity:.6}
-.nt{position:relative;width:30px;height:16px;cursor:pointer;flex-shrink:0}
-.nt input{position:absolute;opacity:0;width:0;height:0}
-.nt-t{
-  position:absolute;inset:0;border-radius:99px;
-  background:rgba(255,255,255,0.08);
-  border:1px solid rgba(255,255,255,0.08);transition:.22s;
-}
-.nt-t::after{
-  content:'';position:absolute;top:2px;left:2px;
-  width:10px;height:10px;border-radius:50%;
-  background:rgba(255,255,255,.4);transition:.22s;
-  box-shadow:0 1px 3px rgba(0,0,0,.4);
-}
-.nt input:checked + .nt-t{background:var(--blue2);border-color:var(--blue2)}
-.nt input:checked + .nt-t::after{transform:translateX(14px);background:#fff}
-.nt.priv input:checked + .nt-t{background:var(--amber);border-color:var(--amber)}
-.nt-row{display:flex;align-items:center;gap:5px}
-.nt-lbl{font-size:0.6rem;color:var(--t3);font-family:var(--mono);letter-spacing:0.03em}
-
-/* ─── MODAL ─── */
-.modal-bg{
-  display:none;position:fixed;inset:0;z-index:900;
-  background:rgba(5,6,12,0.75);
-  backdrop-filter:blur(14px);-webkit-backdrop-filter:blur(14px);
-  align-items:center;justify-content:center;
-}
-.modal-bg.show{display:flex;animation:fdin .2s ease}
-@keyframes fdin{from{opacity:0}to{opacity:1}}
-
-.modal{
-  width:420px;max-width:93vw;max-height:88vh;overflow-y:auto;
-  background:var(--ink2);
-  border:1px solid var(--e2);border-radius:var(--r-xl);
-  box-shadow:
-    0 1px 0 rgba(255,255,255,0.05) inset,
-    0 50px 100px rgba(0,0,0,0.8),
-    0 0 80px rgba(0,80,255,0.08);
-  animation:mdup .28s cubic-bezier(.34,1.56,.64,1);
-}
-@keyframes mdup{from{opacity:0;transform:translateY(20px) scale(.96)}to{opacity:1;transform:none}}
-
-.modal-hd{
-  display:flex;align-items:center;justify-content:space-between;
-  padding:20px 22px 16px;border-bottom:1px solid var(--e1);
-}
-.modal-hd h3{font-size:0.9rem;font-weight:600}
-.modal-x{
-  width:28px;height:28px;border-radius:50%;
-  background:var(--e0);border:1px solid var(--e1);
-  color:var(--t2);font-size:1rem;
-  display:flex;align-items:center;justify-content:center;
-  cursor:pointer;transition:.18s;
-}
-.modal-x:hover{background:rgba(231,76,60,.12);color:var(--red);border-color:rgba(231,76,60,.25)}
-
-.modal-bd{padding:20px 22px}
-.modal-ch-row{
-  display:flex;align-items:center;justify-content:space-between;
-  padding:11px 14px;margin-bottom:16px;
-  background:rgba(0,0,0,0.22);border:1px solid var(--e1);border-radius:var(--r-md);
-}
-.modal-ch-name{font-weight:500;font-size:0.9rem}
-.modal-ch-type{
-  font-size:0.62rem;font-weight:600;letter-spacing:.05em;
-  padding:3px 9px;border-radius:99px;
-  background:var(--blue3);color:var(--blue2);
-  border:1px solid rgba(0,102,255,0.2);text-transform:uppercase;
-}
-
-.opt-list{display:flex;flex-direction:column;gap:8px;margin-bottom:20px}
-.opt-item{
-  display:flex;align-items:center;justify-content:space-between;
-  padding:13px 14px;border-radius:var(--r-md);
-  background:rgba(0,0,0,0.18);border:1px solid var(--e1);
-  cursor:pointer;transition:.18s;
-}
-.opt-item:hover{background:rgba(255,255,255,0.03);border-color:var(--e2)}
-.opt-item input{display:none}
-.opt-info{display:flex;flex-direction:column;gap:2px}
-.opt-title{font-size:0.83rem;font-weight:500}
-.opt-desc{font-size:0.7rem;color:var(--t2)}
-
-.big-tog{position:relative;width:40px;height:22px;flex-shrink:0}
-.big-tog input{position:absolute;opacity:0;width:0;height:0}
-.big-track{
-  position:absolute;inset:0;border-radius:99px;
-  background:rgba(255,255,255,0.07);
-  border:1px solid rgba(255,255,255,.08);transition:.28s;
-}
-.big-track::after{
-  content:'';position:absolute;top:3px;left:3px;
-  width:14px;height:14px;border-radius:50%;
-  background:rgba(255,255,255,.38);transition:.28s;
-  box-shadow:0 1px 4px rgba(0,0,0,.4);
-}
-.big-tog input:checked + .big-track{background:var(--blue2);border-color:transparent}
-.big-tog input:checked + .big-track::after{transform:translateX(18px);background:#fff}
-
-.modal-ft{display:flex;gap:8px;justify-content:flex-end;padding:0 22px 20px}
-
-.btn-sm{
-  padding:9px 18px;border:none;border-radius:var(--r-md);
-  font-family:var(--sans);font-size:0.8rem;font-weight:500;
-  cursor:pointer;transition:.18s;
-}
-.btn-sm.cancel{background:var(--e0);border:1px solid var(--e2);color:var(--t1)}
-.btn-sm.cancel:hover{background:var(--e1)}
-.btn-sm.apply{
-  background:linear-gradient(145deg,#0060ff,#0045cc);
-  color:#fff;border:1px solid rgba(0,120,255,.3);
-  box-shadow:0 4px 14px rgba(0,80,255,.3);
-}
-.btn-sm.apply:hover{transform:translateY(-1px);box-shadow:0 6px 20px rgba(0,80,255,.45)}
-
-/* ─── FOOTER ─── */
-.footer{
-  text-align:center;padding:14px;
-  font-size:0.68rem;color:var(--t3);letter-spacing:0.04em;
-}
-.footer b{color:var(--blue2);font-weight:400}
-
-/* ─── RESPONSIVE ─── */
-@media(max-width:1040px){
-  .grid-3{grid-template-columns:280px 1fr}
-  .prev-panel{grid-column:1/-1}
-}
-@media(max-width:680px){
-  .grid-3{grid-template-columns:1fr}
-  .shell{padding:16px 14px 32px}
-  .header{padding:16px 18px;flex-direction:column;align-items:flex-start}
-  .hd-right{display:none}
-}
-</style>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Discord Server Generator</title>
+    <link rel="stylesheet" href="style.css">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=SF+Pro+Display:wght@300;400;500;600;700&display=swap" rel="stylesheet">
 </head>
 <body>
+    <div class="container">
+        <header class="header">
+            <div class="logo">
+                <span class="discord-icon">🎮</span>
+                <h1>Discord Server Generator</h1>
+            </div>
+            <p class="subtitle">Créez des serveurs Discord uniques avec l'IA</p>
+        </header>
 
-<div class="bg">
-  <div class="bg-grid"></div>
-</div>
+        <main class="main-content">
+            <section class="generator-section">
+                <div class="input-group">
+                    <label for="theme-input">Thème du serveur</label>
+                    <input 
+                        type="text" 
+                        id="theme-input" 
+                        placeholder="Ex: Gaming, Community, Programming..."
+                        class="theme-input"
+                    >
+                </div>
+                
+                <div class="input-group">
+                    <label for="guild-input">ID du serveur Discord</label>
+                    <input 
+                        type="text" 
+                        id="guild-input" 
+                        placeholder="Ex: 123456789012345678"
+                        class="theme-input"
+                    >
+                </div>
+                
+                <button id="generate-btn" class="generate-btn">
+                    <span class="btn-icon">✨</span>
+                    Générer la structure
+                </button>
+                
+                <button id="deploy-btn" class="deploy-btn" style="display: none;">
+                    <span class="btn-icon">🚀</span>
+                    Déployer sur Discord
+                </button>
 
-<div class="shell">
+                <div class="status-indicator" id="status">
+                    <span class="status-dot"></span>
+                    <span class="status-text">Prêt</span>
+                </div>
+            </section>
 
-  <header class="surface accent-edge header">
-    <div class="hd-left">
-      <div class="logotype">🎮</div>
-      <div class="hd-meta">
-        <h1>Discord Server Generator</h1>
-        <p>Créez des serveurs Discord uniques avec l'IA</p>
-      </div>
-    </div>
-    <div class="hd-right">
-      <div class="chip"><div class="chip-dot"></div>Système actif</div>
-      <div class="chip-ver">v2.0</div>
-    </div>
-  </header>
+            <section class="logs-section">
+                <div class="logs-header">
+                    <h3>Logs d'activité</h3>
+                    <button id="clear-logs" class="clear-btn">Effacer</button>
+                </div>
+                <div id="logs" class="logs-container"></div>
+            </section>
 
-  <main class="grid-3">
+            <section class="preview-section">
+                <div class="preview-header">
+                    <h3>Preview Interactive</h3>
+                    <div id="preview-status" class="preview-status">En attente de génération</div>
+                </div>
+                <div id="preview-container" class="preview-container">
+                    <div class="preview-placeholder">
+                        <span class="preview-icon">👁️</span>
+                        <p>Générez un serveur pour voir la preview</p>
+                    </div>
+                </div>
+            </section>
+        </main>
 
-    <!-- GENERATOR -->
-    <div class="surface gen-panel">
-      <div class="s-head">
-        <div class="s-label"><div class="s-bar"></div>Configuration</div>
-      </div>
-
-      <div class="field-wrap">
-        <label class="field-label" for="theme-input">Thème du serveur</label>
-        <input class="field" id="theme-input" type="text" placeholder="Gaming, Dev, Community…">
-      </div>
-
-      <div class="field-wrap">
-        <label class="field-label" for="guild-input">ID du serveur Discord</label>
-        <input class="field" id="guild-input" type="text" placeholder="123456789012345678">
-      </div>
-
-      <button class="btn btn-primary" id="generate-btn">
-        <svg width="14" height="14" viewBox="0 0 14 14" fill="none">
-          <path d="M7 1v2M7 11v2M1 7h2M11 7h2M3.2 3.2l1.4 1.4M9.4 9.4l1.4 1.4M3.2 10.8l1.4-1.4M9.4 4.6l1.4-1.4" stroke="currentColor" stroke-width="1.4" stroke-linecap="round"/>
-        </svg>
-        Générer la structure
-      </button>
-
-      <button class="btn btn-deploy" id="deploy-btn" style="display:none">
-        <svg width="14" height="14" viewBox="0 0 14 14" fill="none">
-          <path d="M7 1L13 7L7 13M1 7h12" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round"/>
-        </svg>
-        Déployer sur Discord
-      </button>
-
-      <div class="status" id="status">
-        <div class="st-dot" id="st-dot"></div>
-        <span class="st-text" id="st-text">Prêt</span>
-      </div>
-    </div>
-
-    <!-- LOGS -->
-    <div class="surface log-panel">
-      <div class="s-head">
-        <div class="s-label"><div class="s-bar"></div>Logs d'activité</div>
-        <button class="ghost-btn" id="clear-logs">Effacer</button>
-      </div>
-      <div class="log-scroll" id="logs">
-        <div class="log-row info">
-          <span class="log-ts">00:00:00</span>
-          <span class="log-msg">Système initialisé — en attente.</span>
+        <!-- Modal pour les options de salon -->
+        <div id="channel-modal" class="modal">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h3>Options du salon</h3>
+                    <button class="modal-close" id="modal-close">&times;</button>
+                </div>
+                <div class="modal-body">
+                    <div class="channel-info">
+                        <span class="channel-name" id="modal-channel-name"># salon</span>
+                        <span class="channel-type" id="modal-channel-type">Texte</span>
+                    </div>
+                    
+                    <div class="options-group">
+                        <label class="checkbox-label">
+                            <input type="checkbox" id="private-option" class="checkbox-input">
+                            <span class="checkbox-custom"></span>
+                            <div class="checkbox-content">
+                                <span class="checkbox-title">🔒 Privé</span>
+                                <span class="checkbox-desc">Seuls certains rôles voient le salon</span>
+                            </div>
+                        </label>
+                        
+                        <label class="checkbox-label">
+                            <input type="checkbox" id="readonly-option" class="checkbox-input">
+                            <span class="checkbox-custom"></span>
+                            <div class="checkbox-content">
+                                <span class="checkbox-title">📖 Lecture seule</span>
+                                <span class="checkbox-desc">Personne ne peut écrire sauf l'admin</span>
+                            </div>
+                        </label>
+                    </div>
+                    
+                    <div class="modal-actions">
+                        <button class="modal-btn secondary" id="modal-cancel">Annuler</button>
+                        <button class="modal-btn primary" id="modal-save">Appliquer</button>
+                    </div>
+                </div>
+            </div>
         </div>
-      </div>
     </div>
 
-    <!-- PREVIEW -->
-    <div class="surface prev-panel">
-      <div class="s-head">
-        <div class="s-label"><div class="s-bar"></div>Preview</div>
-        <div class="prev-tag" id="preview-status">En attente</div>
-      </div>
-      <div class="prev-body" id="preview-container">
-        <div class="placeholder">
-          <div class="ph-icon">👁</div>
-          <p>Générez un serveur pour voir la preview interactive</p>
-        </div>
-      </div>
-    </div>
+    <footer class="footer">
+        <p>Powered by AI • Discord.js v14 • OpenRouter</p>
+    </footer>
 
-  </main>
-
-  <footer class="footer">
-    Propulsé par <b>IA</b> &nbsp;·&nbsp; Discord.js v14 &nbsp;·&nbsp; OpenRouter
-  </footer>
-
-</div>
-
-<!-- MODAL -->
-<div class="modal-bg" id="channel-modal">
-  <div class="modal">
-    <div class="modal-hd">
-      <h3>Options du salon</h3>
-      <button class="modal-x" id="modal-close">×</button>
-    </div>
-    <div class="modal-bd">
-      <div class="modal-ch-row">
-        <span class="modal-ch-name" id="modal-channel-name"># salon</span>
-        <span class="modal-ch-type" id="modal-channel-type">Texte</span>
-      </div>
-      <div class="opt-list">
-        <label class="opt-item">
-          <input type="checkbox" id="private-option">
-          <div class="opt-info">
-            <span class="opt-title">Privé</span>
-            <span class="opt-desc">Seuls certains rôles voient ce salon</span>
-          </div>
-          <div class="big-tog">
-            <input type="checkbox" id="private-toggle">
-            <div class="big-track"></div>
-          </div>
-        </label>
-        <label class="opt-item">
-          <input type="checkbox" id="readonly-option">
-          <div class="opt-info">
-            <span class="opt-title">Lecture seule</span>
-            <span class="opt-desc">Écriture réservée aux administrateurs</span>
-          </div>
-          <div class="big-tog">
-            <input type="checkbox" id="readonly-toggle">
-            <div class="big-track"></div>
-          </div>
-        </label>
-      </div>
-    </div>
-    <div class="modal-ft">
-      <button class="btn-sm cancel" id="modal-cancel">Annuler</button>
-      <button class="btn-sm apply" id="modal-save">Appliquer</button>
-    </div>
-  </div>
-</div>
-
-<script src="script.js"></script>
+    <script src="script.js"></script>
 </body>
 </html>
