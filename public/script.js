@@ -8,11 +8,26 @@ const statusIndicator = document.getElementById('status');
 const statusDot = statusIndicator.querySelector('.status-dot');
 const statusText = statusIndicator.querySelector('.status-text');
 
+// Éléments de preview et modal
+const previewContainer = document.getElementById('preview-container');
+const previewStatus = document.getElementById('preview-status');
+const channelModal = document.getElementById('channel-modal');
+const modalChannelName = document.getElementById('modal-channel-name');
+const modalChannelType = document.getElementById('modal-channel-type');
+const privateOption = document.getElementById('private-option');
+const readonlyOption = document.getElementById('readonly-option');
+const modalClose = document.getElementById('modal-close');
+const modalCancel = document.getElementById('modal-cancel');
+const modalSave = document.getElementById('modal-save');
+
 // URL de l'API backend - REMPLACER PAR VOTRE URL RAILWAY
 const API_URL = 'https://creatorbot-production.up.railway.app';
 
 // État de l'application
 let isGenerating = false;
+let currentStructure = null;
+let currentChannel = null;
+let channelPermissions = new Map();
 
 // Fonction pour ajouter un log
 function addLog(message, type = 'info') {
@@ -134,6 +149,12 @@ async function generateServer() {
         addLog(`👑 ${data.stats.roles} rôles créés`, 'info');
         updateStatus('Génération terminée', 'ready');
         
+        // Afficher la preview
+        if (data.structure) {
+            displayPreview(data.structure);
+            addLog('👁️ Preview interactive disponible', 'info');
+        }
+        
     } catch (error) {
         addLog(`❌ Erreur lors de la génération: ${error.message}`, 'error');
         updateStatus('Erreur de génération', 'error');
@@ -144,14 +165,173 @@ async function generateServer() {
     }
 }
 
+// Fonction pour afficher la preview de la structure
+function displayPreview(structure) {
+    currentStructure = structure;
+    previewStatus.textContent = 'Prêt';
+    previewStatus.style.color = 'var(--success)';
+    
+    let html = '';
+    
+    structure.categories.forEach(category => {
+        html += `
+            <div class="preview-category">
+                <div class="preview-category-name">
+                    ${category.name}
+                </div>
+                <div class="preview-channels">
+        `;
+        
+        category.channels.forEach(channel => {
+            const channelId = `${category.name}-${channel.name}`;
+            const permissions = channelPermissions.get(channelId) || {};
+            const classes = [
+                'preview-channel',
+                channel.type,
+                permissions.private ? 'private' : '',
+                permissions.readonly ? 'readonly' : ''
+            ].filter(Boolean).join(' ');
+            
+            const icon = channel.type === 'voice' ? '🎤' : '💬';
+            const badges = [];
+            if (permissions.private) badges.push('🔒');
+            if (permissions.readonly) badges.push('📖');
+            
+            html += `
+                <div class="${classes}" data-channel-id="${channelId}" 
+                     data-category="${category.name}" data-channel="${channel.name}" 
+                     data-type="${channel.type}">
+                    <span>${icon}</span>
+                    <span>${channel.name}</span>
+                    <span class="channel-badges">${badges.join(' ')}</span>
+                </div>
+            `;
+        });
+        
+        html += `
+                </div>
+            </div>
+        `;
+    });
+    
+    previewContainer.innerHTML = html;
+    
+    // Ajouter les écouteurs d'événements pour les salons cliquables
+    document.querySelectorAll('.preview-channel').forEach(channel => {
+        channel.addEventListener('click', () => openChannelModal(channel));
+    });
+}
+
+// Fonction pour ouvrir la modal d'options de salon
+function openChannelModal(channelElement) {
+    const categoryId = channelElement.dataset.category;
+    const channelName = channelElement.dataset.channel;
+    const channelType = channelElement.dataset.type;
+    const channelId = channelElement.dataset.channelId;
+    
+    currentChannel = {
+        id: channelId,
+        name: channelName,
+        type: channelType,
+        category: categoryId
+    };
+    
+    // Mettre à jour la modal
+    modalChannelName.textContent = channelType === 'voice' ? '🎤 ' : '💬 ' + channelName;
+    modalChannelType.textContent = channelType === 'voice' ? 'Vocal' : 'Texte';
+    
+    // Charger les permissions existantes
+    const permissions = channelPermissions.get(channelId) || {};
+    privateOption.checked = permissions.private || false;
+    readonlyOption.checked = permissions.readonly || false;
+    
+    // Afficher la modal
+    channelModal.classList.add('show');
+}
+
+// Fonction pour fermer la modal
+function closeModal() {
+    channelModal.classList.remove('show');
+    currentChannel = null;
+}
+
+// Fonction pour sauvegarder les permissions du salon
+function saveChannelPermissions() {
+    if (!currentChannel) return;
+    
+    const permissions = {
+        private: privateOption.checked,
+        readonly: readonlyOption.checked
+    };
+    
+    channelPermissions.set(currentChannel.id, permissions);
+    
+    // Mettre à jour l'affichage du salon
+    const channelElement = document.querySelector(`[data-channel-id="${currentChannel.id}"]`);
+    if (channelElement) {
+        // Mettre à jour les classes
+        channelElement.classList.toggle('private', permissions.private);
+        channelElement.classList.toggle('readonly', permissions.readonly);
+        
+        // Mettre à jour les badges
+        const badges = [];
+        if (permissions.private) badges.push('🔒');
+        if (permissions.readonly) badges.push('📖');
+        
+        const badgesElement = channelElement.querySelector('.channel-badges');
+        if (badgesElement) {
+            badgesElement.textContent = badges.join(' ');
+        }
+    }
+    
+    addLog(`✅ Permissions mises à jour pour ${currentChannel.name}`, 'success');
+    closeModal();
+}
+
 // Fonction pour effacer les logs
 function clearLogs() {
     logsContainer.innerHTML = '';
     addLog('📋 Logs effacés', 'info');
 }
 
-// Écouteurs d'événements
-generateBtn.addEventListener('click', generateServer);
+// Fonction pour envoyer les permissions au backend
+async function applyPermissionsToServer() {
+    if (!currentStructure || channelPermissions.size === 0) {
+        addLog('⚠️ Aucune permission à appliquer', 'warning');
+        return;
+    }
+    
+    try {
+        const permissionsArray = Array.from(channelPermissions.entries()).map(([channelId, perms]) => ({
+            channelId,
+            ...perms
+        }));
+        
+        const response = await fetch(`${API_URL}/apply-permissions`, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json'
+            },
+            body: JSON.stringify({
+                guildId: guildInput.value.trim(),
+                permissions: permissionsArray
+            })
+        });
+        
+        const data = await response.json();
+        
+        if (!response.ok) {
+            throw new Error(data.error || 'Erreur lors de l\'application des permissions');
+        }
+        
+        addLog('✅ Permissions appliquées avec succès!', 'success');
+        addLog(`🔒 ${data.privateChannels} salons privés configurés`, 'info');
+        addLog(`📖 ${data.readonlyChannels} salons en lecture seule configurés`, 'info');
+        
+    } catch (error) {
+        addLog(`❌ Erreur lors de l'application des permissions: ${error.message}`, 'error');
+    }
+}
 
 themeInput.addEventListener('keypress', (e) => {
     if (e.key === 'Enter') {
@@ -165,7 +345,28 @@ guildInput.addEventListener('keypress', (e) => {
     }
 });
 
+// Écouteurs d'événements
+generateBtn.addEventListener('click', generateServer);
 clearLogsBtn.addEventListener('click', clearLogs);
+
+// Écouteurs pour la modal
+modalClose.addEventListener('click', closeModal);
+modalCancel.addEventListener('click', closeModal);
+modalSave.addEventListener('click', saveChannelPermissions);
+
+// Fermer la modal en cliquant à l'extérieur
+channelModal.addEventListener('click', (e) => {
+    if (e.target === channelModal) {
+        closeModal();
+    }
+});
+
+// Fermer la modal avec la touche Échap
+document.addEventListener('keydown', (e) => {
+    if (e.key === 'Escape' && channelModal.classList.contains('show')) {
+        closeModal();
+    }
+});
 
 // Auto-focus sur le premier input
 themeInput.focus();

@@ -192,8 +192,8 @@ async function clearServer(guild) {
   }
 }
 
-// Fonction pour créer la structure du serveur
-async function createServerStructure(guild, structure) {
+// Fonction pour créer la structure du serveur avec permissions
+async function createServerStructure(guild, structure, permissionOverwrites = []) {
   try {
     console.log('🏗️ Création de la structure du serveur...');
     
@@ -215,17 +215,51 @@ async function createServerStructure(guild, structure) {
       }
     }
 
-    // Étape 2: Créer les salons dans leurs catégories respectives
+    // Étape 2: Créer les salons dans leurs catégories respectives avec permissions
+    const createdChannels = new Map();
     for (const categoryData of createdCategories) {
       for (const channel of categoryData.original.channels) {
         try {
           const channelType = channel.type === 'voice' ? ChannelType.GuildVoice : ChannelType.GuildText;
-          await guild.channels.create({
+          
+          // Préparer les permissions pour ce salon
+          const permissions = permissionOverwrites.find(p => 
+            p.channelId === `${categoryData.original.name}-${channel.name}`
+          );
+          
+          let permissionOverwrites = [];
+          
+          if (permissions) {
+            // Si le salon est privé
+            if (permissions.private) {
+              permissionOverwrites.push({
+                id: guild.roles.everyone.id,
+                deny: [PermissionsBitField.Flags.ViewChannel]
+              });
+            }
+            
+            // Si le salon est en lecture seule
+            if (permissions.readonly) {
+              permissionOverwrites.push({
+                id: guild.roles.everyone.id,
+                deny: [PermissionsBitField.Flags.SendMessages]
+              });
+            }
+          }
+          
+          const createdChannel = await guild.channels.create({
             name: channel.name,
             type: channelType,
-            parent: categoryData.created.id
+            parent: categoryData.created.id,
+            permissionOverwrites: permissionOverwrites
           });
+          
+          createdChannels.set(`${categoryData.original.name}-${channel.name}`, createdChannel);
           console.log(`💬 Salon créé: ${channel.name} dans ${categoryData.original.name}`);
+          
+          if (permissions) {
+            console.log(`🔒 Permissions appliquées: privé=${permissions.private}, lecture seule=${permissions.readonly}`);
+          }
         } catch (error) {
           console.error(`❌ Erreur création salon ${channel.name}:`, error.message);
         }
@@ -237,7 +271,7 @@ async function createServerStructure(guild, structure) {
       try {
         const createdRole = await guild.roles.create({
           name: role.name,
-          color: role.color, // discord.js v14 accepte directement l'hex
+          color: role.color,
           permissions: [PermissionsBitField.Flags.SendMessages]
         });
         console.log(`👑 Rôle créé: ${role.name} (ID: ${createdRole.id})`);
@@ -252,6 +286,7 @@ async function createServerStructure(guild, structure) {
     await Promise.allSettled(rolePromises);
 
     console.log('✅ Structure du serveur créée avec succès');
+    return createdChannels;
   } catch (error) {
     console.error('❌ Erreur lors de la création de la structure:', error.message);
     throw error;
@@ -292,7 +327,7 @@ app.post('/generate', async (req, res) => {
     await clearServer(guild);
 
     // Créer la nouvelle structure
-    await createServerStructure(guild, structure);
+    await createServerStructure(guild, structure, req.body.permissionOverwrites || []);
 
     res.json({ 
       success: true, 
@@ -307,6 +342,106 @@ app.post('/generate', async (req, res) => {
 
   } catch (error) {
     console.error('❌ Erreur lors de la génération:', error.message);
+    res.status(500).json({ error: error.message });
+  }
+});
+
+// Route pour appliquer les permissions aux salons existants
+app.post('/apply-permissions', async (req, res) => {
+  try {
+    const { guildId, permissions } = req.body;
+    
+    if (!guildId) {
+      return res.status(400).json({ error: 'L\'ID du serveur Discord est requis' });
+    }
+    
+    if (!permissions || !Array.isArray(permissions)) {
+      return res.status(400).json({ error: 'Les permissions sont requises' });
+    }
+
+    console.log(`🔒 Application des permissions pour le serveur: ${guildId}`);
+
+    // Vérifier que le bot est connecté
+    if (!client.isReady()) {
+      return res.status(500).json({ error: 'Bot Discord non connecté' });
+    }
+
+    // Récupérer le serveur
+    const guild = client.guilds.cache.get(guildId);
+    if (!guild) {
+      return res.status(404).json({ error: 'Serveur Discord non trouvé. Le bot doit être sur ce serveur.' });
+    }
+
+    let privateChannels = 0;
+    let readonlyChannels = 0;
+
+    // Appliquer les permissions à chaque salon
+    for (const permissionData of permissions) {
+      try {
+        // Trouver le salon par son nom
+        const [categoryName, channelName] = permissionData.channelId.split('-');
+        const category = guild.channels.cache.find(c => 
+          c.type === ChannelType.GuildCategory && c.name === categoryName
+        );
+        
+        if (!category) {
+          console.log(`⚠️ Catégorie non trouvée: ${categoryName}`);
+          continue;
+        }
+
+        const channel = guild.channels.cache.find(c => 
+          c.parentId === category.id && c.name === channelName
+        );
+
+        if (!channel) {
+          console.log(`⚠️ Salon non trouvé: ${channelName} dans ${categoryName}`);
+          continue;
+        }
+
+        // Préparer les permission overwrites
+        const overwrites = [];
+
+        // Si le salon est privé
+        if (permissionData.private) {
+          overwrites.push({
+            id: guild.roles.everyone.id,
+            deny: [PermissionsBitField.Flags.ViewChannel]
+          });
+          privateChannels++;
+        }
+
+        // Si le salon est en lecture seule
+        if (permissionData.readonly) {
+          overwrites.push({
+            id: guild.roles.everyone.id,
+            deny: [PermissionsBitField.Flags.SendMessages]
+          });
+          readonlyChannels++;
+        }
+
+        // Appliquer les permissions
+        if (overwrites.length > 0) {
+          await channel.permissionOverwrites.set(overwrites);
+          console.log(`✅ Permissions appliquées pour ${channel.name}: privé=${permissionData.private}, lecture seule=${permissionData.readonly}`);
+        }
+
+      } catch (error) {
+        console.error(`❌ Erreur lors de l'application des permissions pour ${permissionData.channelId}:`, error.message);
+      }
+    }
+
+    res.json({ 
+      success: true, 
+      message: 'Permissions appliquées avec succès',
+      stats: {
+        privateChannels,
+        readonlyChannels,
+        totalProcessed: permissions.length
+      }
+    });
+
+  } catch (error) {
+    console.error('❌ Erreur lors de l\'application des permissions:', error.message);
     res.status(500).json({ error: error.message });
   }
 });

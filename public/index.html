@@ -6,6 +6,7 @@
     <title>Discord Server Generator</title>
     <link rel="stylesheet" href="style.css">
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=SF+Pro+Display:wght@300;400;500;600;700&display=swap" rel="stylesheet">
 </head>
 <body>
     <div class="container">
@@ -57,12 +58,66 @@
                 </div>
                 <div id="logs" class="logs-container"></div>
             </section>
+
+            <section class="preview-section">
+                <div class="preview-header">
+                    <h3>Preview Interactive</h3>
+                    <div id="preview-status" class="preview-status">En attente de génération</div>
+                </div>
+                <div id="preview-container" class="preview-container">
+                    <div class="preview-placeholder">
+                        <span class="preview-icon">👁️</span>
+                        <p>Générez un serveur pour voir la preview</p>
+                    </div>
+                </div>
+            </section>
         </main>
 
-        <footer class="footer">
-            <p>Powered by AI • Discord.js v14 • OpenRouter</p>
-        </footer>
+        <!-- Modal pour les options de salon -->
+        <div id="channel-modal" class="modal">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h3>Options du salon</h3>
+                    <button class="modal-close" id="modal-close">&times;</button>
+                </div>
+                <div class="modal-body">
+                    <div class="channel-info">
+                        <span class="channel-name" id="modal-channel-name"># salon</span>
+                        <span class="channel-type" id="modal-channel-type">Texte</span>
+                    </div>
+                    
+                    <div class="options-group">
+                        <label class="checkbox-label">
+                            <input type="checkbox" id="private-option" class="checkbox-input">
+                            <span class="checkbox-custom"></span>
+                            <div class="checkbox-content">
+                                <span class="checkbox-title">🔒 Privé</span>
+                                <span class="checkbox-desc">Seuls certains rôles voient le salon</span>
+                            </div>
+                        </label>
+                        
+                        <label class="checkbox-label">
+                            <input type="checkbox" id="readonly-option" class="checkbox-input">
+                            <span class="checkbox-custom"></span>
+                            <div class="checkbox-content">
+                                <span class="checkbox-title">📖 Lecture seule</span>
+                                <span class="checkbox-desc">Personne ne peut écrire sauf l'admin</span>
+                            </div>
+                        </label>
+                    </div>
+                    
+                    <div class="modal-actions">
+                        <button class="modal-btn secondary" id="modal-cancel">Annuler</button>
+                        <button class="modal-btn primary" id="modal-save">Appliquer</button>
+                    </div>
+                </div>
+            </div>
+        </div>
     </div>
+
+    <footer class="footer">
+        <p>Powered by AI • Discord.js v14 • OpenRouter</p>
+    </footer>
 
     <script src="script.js"></script>
 </body>
