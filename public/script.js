@@ -179,6 +179,10 @@ async function deployToDiscord() {
     
     addLog(`🚀 Début du déploiement sur le serveur: ${guildId}`, 'info');
     
+    // Log de débogage pour vérifier la structure envoyée
+    console.log('📋 Structure envoyée au backend:', JSON.stringify(currentStructure, null, 2));
+    addLog('🔍 Vérification de la structure à déployer...', 'info');
+    
     try {
         const response = await fetch(`${API_URL}/deploy`, {
             method: 'POST',

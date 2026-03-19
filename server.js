@@ -196,6 +196,7 @@ async function clearServer(guild) {
 async function createServerStructure(guild, structure) {
   try {
     console.log('🏗️ Création de la structure du serveur...');
+    console.log('📋 Structure à créer:', JSON.stringify(structure, null, 2));
     
     // Étape 1: Créer toutes les catégories d'abord
     const createdCategories = [];
@@ -223,25 +224,31 @@ async function createServerStructure(guild, structure) {
           const channelType = channel.type === 'voice' ? ChannelType.GuildVoice : ChannelType.GuildText;
           
           // Préparer les permission overwrites depuis les attributs du salon
-          let permissionOverwrites = [];
+          const permissionOverwrites = [];
+          
+          console.log(`🔧 Configuration du salon: ${channel.name}`);
+          console.log(`   - isPrivate: ${channel.isPrivate}`);
+          console.log(`   - readOnly: ${channel.readOnly}`);
           
           // Si le salon est privé (isPrivate)
           if (channel.isPrivate) {
             permissionOverwrites.push({
-              id: guild.roles.everyone.id,
+              id: guild.id, // Utiliser guild.id pour @everyone
               deny: [PermissionsBitField.Flags.ViewChannel]
             });
-            console.log(`🔒 Salon privé: ${channel.name}`);
+            console.log(`🔒 Ajout permission ViewChannel:deny pour ${channel.name}`);
           }
           
           // Si le salon est en lecture seule (readOnly)
           if (channel.readOnly) {
             permissionOverwrites.push({
-              id: guild.roles.everyone.id,
+              id: guild.id, // Utiliser guild.id pour @everyone
               deny: [PermissionsBitField.Flags.SendMessages]
             });
-            console.log(`📖 Salon lecture seule: ${channel.name}`);
+            console.log(`📖 Ajout permission SendMessages:deny pour ${channel.name}`);
           }
+          
+          console.log(`📋 Permission overwrites finales pour ${channel.name}:`, JSON.stringify(permissionOverwrites, null, 2));
           
           const createdChannel = await guild.channels.create({
             name: channel.name,
@@ -251,7 +258,7 @@ async function createServerStructure(guild, structure) {
           });
           
           createdChannels.set(`${categoryData.original.name}-${channel.name}`, createdChannel);
-          console.log(`💬 Salon créé: ${channel.name} dans ${categoryData.original.name}`);
+          console.log(`💬 Salon créé: ${channel.name} dans ${categoryData.original.name} (ID: ${createdChannel.id})`);
           
           if (channel.isPrivate || channel.readOnly) {
             console.log(`🔒 Permissions appliquées: privé=${channel.isPrivate}, lecture seule=${channel.readOnly}`);
@@ -388,6 +395,7 @@ app.post('/deploy', async (req, res) => {
     }
 
     console.log(`🚀 Déploiement sur le serveur: ${guildId}`);
+    console.log('📋 Structure reçue:', JSON.stringify(structure, null, 2));
 
     // Vérifier que le bot est connecté
     if (!client.isReady()) {
